@@ -1,0 +1,39 @@
+/* CSS declarations go here */
+
+#user-notifications {
+	width: 200px;
+}
+
+.new-subscription,
+.new-donation {
+	width: 100%;
+	text-align: center;
+	font-size: 1.5em;
+	padding: 10px;
+	margin-bottom: 5px;
+
+	-webkit-transition: all 1.0s linear;
+	transition: all 1.0s linear;
+}
+
+.new-donation {
+	background-color: yellow;
+}
+
+.new-subscription {
+	background-color: #666;
+	color: white;
+}
+
+.poll {
+	float: left;
+	margin-right: 400px;
+	margin-left: 100px;
+}
+
+.legend-icon {
+	width: 10px;
+	height: 10px;
+	margin-right: 4px;
+	display: inline-block;
+}

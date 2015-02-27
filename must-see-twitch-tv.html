@@ -1,0 +1,34 @@
+<head>
+  <title>must-see-twitch-tv</title>
+</head>
+
+<body>
+	<div class="poll">
+		<h1>{{ PollQuestion }}</h1>
+		<div>
+			<div class="legend-icon" style="background-color: #F7464A"></div>
+			A: {{ PollResults.A }}
+		</div>
+		<div>
+			<div class="legend-icon" style="background-color: #46BFBD"></div>
+			B: {{ PollResults.B }}
+		</div>
+		<div>
+			<div class="legend-icon" style="background-color: #FDB45C"></div>
+			C: {{ PollResults.C }}
+		</div>
+		<div>
+			<div class="legend-icon" style="background-color: #0000AA"></div>
+			D: {{ PollResults.D }}
+		</div>
+		<canvas id="myChart" width="200" height="200"></canvas>
+		<div id="chart-legend"></div>
+	</div>
+
+	<div class="notifications">
+		<div id="user-notifications"></div>
+	</div>
+
+</body>
+
+

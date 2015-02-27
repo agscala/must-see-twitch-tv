@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "irc": {
+      "version": "0.3.9",
+      "dependencies": {
+        "ansi-color": {
+          "version": "0.2.1"
+        },
+        "irc-colors": {
+          "version": "1.1.0",
+          "dependencies": {
+            "hashish": {
+              "version": "0.0.4",
+              "dependencies": {
+                "traverse": {
+                  "version": "0.6.6"
+                }
+              }
+            }
+          }
+        },
+        "node-icu-charset-detector": {
+          "version": "0.0.7"
+        }
+      }
+    }
+  }
+}
