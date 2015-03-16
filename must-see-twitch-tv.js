@@ -35,6 +35,8 @@ var PollManager = function() {
 			count: 0,
 		}
 	};
+
+	this.save();
 }
 
 PollManager.prototype.getCurrentQuestion = function() {
@@ -91,6 +93,8 @@ PollManager.prototype.vote = function(letter) {
 
 if (Meteor.isClient) {
 	Session.set("donations_total", 0);
+	Session.set("sub_count", 0);
+	Session.set("poll_state", PollResults.findOne());
 
 	$(document).ready(function() {
 		var s = Snap(300, 500);
@@ -187,14 +191,14 @@ if (Meteor.isClient) {
 
 			PollResults.find().observe({
 				added: function(results) {
-					Session.set("PollState", results);
+					Session.set("poll_state", results);
 				}
 			});
 		});
 	});
 
 	Template.body.helpers({
-		PollState: function() { return Session.get("PollState") },
+		PollState: function() { return Session.get("poll_state") },
 		SubCount: function() { return Session.get("sub_count") },
 		LastDonation: function() { return Session.get("last_donation") },
 		DonationsTotal: function() { return Session.get("donations_total") },
