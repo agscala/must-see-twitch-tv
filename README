@@ -1,0 +1,3 @@
+requires meteor.js
+
+once that's installed, run 'meteor' and all dependencies should be downloaded automatically and a server will start.
