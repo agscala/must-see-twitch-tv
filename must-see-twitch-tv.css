@@ -32,13 +32,6 @@
 	margin-left: 100px;
 }
 
-.legend-icon {
-	width: 10px;
-	height: 10px;
-	margin-right: 4px;
-	display: inline-block;
-}
-
 .scrolling-message {
 	position: absolute;
 	z-index: 1000;
