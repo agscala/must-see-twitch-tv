@@ -1,63 +1,98 @@
+Messages = new Mongo.Collection("messages");
 Subscribers = new Mongo.Collection("subscribers");
+Donations = new Mongo.Collection("donations");
 PollResults = new Mongo.Collection("poll-results");
 
-if (Meteor.isClient) {
-	var data = [
+var PollManager = function() {
+	this.questions = [
 		{
-			value: 1,
-			color:"#F7464A",
-			highlight: "#FF5A5E",
-			label: "A"
+			question: "Best Tootsie Pop?",
+			answers: ["chocolate", "grape"]
 		},
 		{
-			value: 1,
-			color: "#46BFBD",
-			highlight: "#5AD3D1",
-			label: "B"
+			question: "ROLO TONY",
+			answers: ["BROWN", "TOWN"]
 		},
 		{
-			value: 1,
-			color: "#FDB45C",
-			highlight: "#FFC870",
-			label: "C"
+			question: "Which is worse?",
+			answers: ["Sonic", "Satan"]
 		},
-		{
-			value: 1,
-			color: "#0000AA",
-			highlight: "#0000FF",
-			label: "D"
-		}
-	]
-	var options = {
-		//Boolean - Whether we should show a stroke on each segment
-		segmentShowStroke : true,
-		//String - The colour of each segment stroke
-		segmentStrokeColor : "#fff",
-		//Number - The width of each segment stroke
-		segmentStrokeWidth : 2,
-		//Number - The percentage of the chart that we cut out of the middle
-		percentageInnerCutout : 50, // This is 0 for Pie charts
-		//Number - Amount of animation steps
-		animationSteps : 50,
-		//String - Animation easing effect
-		animationEasing : "easeOutBounce",
-		//Boolean - Whether we animate the rotation of the Doughnut
-		animateRotate : true,
-		//Boolean - Whether we animate scaling the Doughnut from the centre
-		animateScale : false,
-		//String - A legend template
-		legendTemplate : "<% for (var i=0; i<segments.length; i++){%><div style=\"width: 10px; background-color:<%=segments[i].fillColor%>\"><%if(segments[i].label){%><%=segments[i].label%><%}%></div><%}%>"
-	};
+	];
 
+	this.currentQuestionIndex = 0;
+
+	this.timePerQuestion_ms = 1000 * 60 * 5; // 5 minutes in milliseconds
+
+	this.startTime = moment();
+
+	this.resultState = {
+		A: {
+			answer: this.questions[this.currentQuestionIndex].answers[0],
+			count: 0,
+		},
+		B: {
+			answer: this.questions[this.currentQuestionIndex].answers[1],
+			count: 0,
+		}
+	};
+}
+
+PollManager.prototype.getCurrentQuestion = function() {
+	this.update();
+
+	return this.questions[this.currentQuestionIndex].question;
+}
+
+PollManager.prototype.resetResults = function(questionIndex) {
+	this.currentQuestionIndex = questionIndex;
+
+	this.resultState = {
+		A: {
+			answer: this.questions[this.currentQuestionIndex].answers[0],
+			count: 0,
+		},
+		B: {
+			answer: this.questions[this.currentQuestionIndex].answers[1],
+			count: 0,
+		}
+	};
+}
+
+PollManager.prototype.update = function() {
+	var timeElapsed_ms = moment().diff(this.startTime);
+	var QuestionIndex = Math.round(timeElapsed_ms / this.timePerQuestion_ms) % this.questions.length;
+
+	if(QuestionIndex !== this.currentQuestionIndex) {
+		this.resetResults(QuestionIndex);
+		this.save();
+	}
+}
+
+PollManager.prototype.save = function() {
+	PollResults.insert({
+		question: this.getCurrentQuestion(),
+		results: this.resultState
+	});
+}
+
+PollManager.prototype.vote = function(letter) {
+	this.update();
+
+	if(letter === "A") {
+		this.resultState.A.count = this.resultState.A.count + 1;
+		this.save();
+	}
+
+	if(letter === "B") {
+		this.resultState.B.count = this.resultState.B.count + 1;
+		this.save();
+	}
+}
+
+if (Meteor.isClient) {
+	Session.set("donations_total", 0);
 
 	$(document).ready(function() {
-		var ctx = document.getElementById("myChart").getContext("2d");
-		var myDoughnutChart = new Chart(ctx).Doughnut(data, options);
-
-		$(".new-subscription, .new-donation").on("click", function() {
-			$(this).hide();
-		});
-
 		var s = Snap(300, 500);
 		var dimensions = {
 			width: 300,
@@ -115,86 +150,110 @@ if (Meteor.isClient) {
 			PopNode();
 		});
 
+		function AnimateMessage(text) {
+			var position = Math.random() * 800;
+			var message = $("<div class='scrolling-message'>"+text.toUpperCase()+"</div>");
+			$("body").append(message);
+			$(message).css({"position": "absolute", "left": "1500px", "top": position});
+			$(message).animate({left: -1 * $(message).width()}, 10000, function() {
+				$(this).remove();
+			});
+		}
+
 		Meteor.autosubscribe(function() {
 			Subscribers.find().observe({
 				added: function(sub) {
 					AddNode(sub.username);
+					Session.set("sub_count", Subscribers.find().count());
+				}
+			});
+
+			Donations.find().observe({
+				added: function(donation) {
+					Session.set("last_donation", donation);
+
+					var donations_total = parseFloat(Session.get("donations_total"));
+					donations_total = donations_total + parseFloat(donation.amount);
+
+					Session.set("donations_total", donations_total.toFixed(2));
+				}
+			});
+
+			Messages.find().observe({
+				added: function(message) {
+					AnimateMessage(message.text);
 				}
 			});
 
 			PollResults.find().observe({
 				added: function(results) {
-					Session.set("LatestPollResult", results);
-					console.log(results);
-					console.log(myDoughnutChart.segments);
-					myDoughnutChart.segments[0].value = results.A;
-					myDoughnutChart.segments[1].value = results.B;
-					myDoughnutChart.segments[2].value = results.C;
-					myDoughnutChart.segments[3].value = results.D;
-					myDoughnutChart.update();
+					Session.set("PollState", results);
 				}
 			});
 		});
 	});
 
 	Template.body.helpers({
-		PollQuestion: "Chat Poll",
-		PollResults: function() { return Session.get("LatestPollResult") }
+		PollState: function() { return Session.get("PollState") },
+		SubCount: function() { return Session.get("sub_count") },
+		LastDonation: function() { return Session.get("last_donation") },
+		DonationsTotal: function() { return Session.get("donations_total") },
 	});
 }
 
 if (Meteor.isServer) {
 
-	var Results = {
-		A: 1,
-		B: 1,
-		C: 1,
-		D: 1
-	}
+	var pollManager = new PollManager();
+
 
   Meteor.startup(function () {
     // code to run on server at startup
 	irc = Meteor.npmRequire("irc");
 
+	Messages.remove({});
 	Subscribers.remove({});
 	PollResults.remove({});
 
 	var client = new irc.Client('irc.twitch.tv', 'agscala', {
-		channels: ['#northernlion'],
+		channels: ['#mustseetwitchtv'],
 		sasl: true,
 		username: "agscala",
 		password: "oauth:o3qzmv5do28rocpuey1d5kz0e8goai"
 	});
 
 	var callback = Meteor.bindEnvironment(function(from, to, message) {
-		if(message.indexOf("Kappa") != -1) {
-			console.log(from + ' => ' + to + ': ' + message);
 
+		Messages.insert({
+			username: from,
+			text: message
+		});
+
+		if(message.toUpperCase().indexOf("SUBSCRIBE") != -1) {
 			Subscribers.insert({
 				username: from,
 				message: message
 			});
 		}
 
-		UpdatedResults = Results;
-
-		if(message.indexOf("a") != -1) { // VOTE A
-			UpdatedResults.A = UpdatedResults.A + 1;
+		var regex = /donate (\d+\.?\d+?) ([\w ]+)/
+		var matches = message.match(regex);
+		if(matches !== null) {
+			Donations.insert({
+				username: from,
+				amount: matches[1],
+				message: matches[2]
+			});
 		}
 
-		if(message.indexOf("j") != -1) { // VOTE B
-			UpdatedResults.B = UpdatedResults.B + 1;
+		pollManager.update();
+
+		if(message.indexOf("VOTE A") !== -1) { // VOTE A
+			pollManager.vote("A");
 		}
 
-		if(message.indexOf("z") != -1) { // VOTE C
-			UpdatedResults.C = UpdatedResults.C + 1;
+		if(message.indexOf("VOTE B") !== -1) { // VOTE B
+			pollManager.vote("B");
 		}
-
-		if(message.indexOf("q") != -1) { // VOTE D
-			UpdatedResults.D = UpdatedResults.D + 1;
-		}
-
-		PollResults.insert(UpdatedResults)
 	});
 
 	client.addListener('message', callback);
